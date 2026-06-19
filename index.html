@@ -22,12 +22,12 @@
 
     <input type="text" id="odaKoduGiris" placeholder="8 haneli kod gir">
     <button onclick="odaKoduylaBaglan()">Bağlan</button>
-    <button id="speakerBtn" onclick="hoparlorDegistir()">Hoparlör: Kapalı</button>
+    <button id="modBtn" onclick="modDegistir()">Mod: Hoparlör</button>
 
     <script>
-        var yerelStream, remoteAudio;
+        var yerelStream, remoteAudio = new Audio();
         var peer = new Peer(kodOlustur()); 
-        var hoparlorAcik = false;
+        var hoparlorModu = true; // true = hoparlör, false = kulaklık
 
         function kodOlustur() {
             let m = "", c = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -35,13 +35,11 @@
             return m;
         }
 
-        function hoparlorDegistir() {
-            hoparlorAcik = !hoparlorAcik;
-            if (remoteAudio) {
-                // Tarayıcı destekliyorsa hoparlörü değiştir
-                remoteAudio.setSinkId ? remoteAudio.setSinkId(hoparlorAcik ? "" : "earpiece") : null;
-            }
-            document.getElementById('speakerBtn').innerText = hoparlorAcik ? "Hoparlör: Açık" : "Hoparlör: Kapalı";
+        function modDegistir() {
+            hoparlorModu = !hoparlorModu;
+            // Hoparlör kapalıysa sesi kıs (kulağa tutma modu)
+            remoteAudio.volume = hoparlorModu ? 1.0 : 0.3;
+            document.getElementById('modBtn').innerText = hoparlorModu ? "Mod: Hoparlör" : "Mod: Kulaklık";
         }
 
         navigator.mediaDevices.getUserMedia({audio: true}).then(s => {
@@ -68,7 +66,6 @@
         function odaKoduylaBaglan() {
             var kod = document.getElementById("odaKoduGiris").value;
             if (kod.length !== 8) { alert("8 haneli kod gir!"); return; }
-            
             var call = peer.call(kod, yerelStream);
             call.on('stream', s => gelenSesiBaslat(s));
         }
@@ -79,7 +76,6 @@
         });
 
         function gelenSesiBaslat(s) {
-            remoteAudio = new Audio();
             remoteAudio.srcObject = s;
             remoteAudio.play();
             document.getElementById('durum').innerText = "Bağlantı Başarılı!";
