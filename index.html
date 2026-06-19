@@ -9,6 +9,7 @@
         .bar { width: 15px; background: white; height: 20px; transition: height 0.05s ease; border-radius: 3px; }
         input { padding: 10px; width: 200px; border-radius: 5px; border: none; }
         button { padding: 12px 24px; cursor: pointer; background: #008080; color: white; border: none; border-radius: 5px; margin: 5px; font-weight: bold; }
+        #kapatBtn { background: #e74c3c; } /* Kırmızı kapatma butonu */
     </style>
 </head>
 <body>
@@ -25,12 +26,12 @@
     <br>
     <button id="muteBtn" onclick="sesiKapat()">Mikrofon: Açık</button>
     <button id="hoparlorBtn" onclick="hoparlorDegistir()">Hoparlör: Kapalı</button>
+    <button id="kapatBtn" onclick="gorusmeyiBitir()">Aramayı Kapat</button>
 
     <script>
-        var yerelStream, remoteAudio = new Audio();
+        var yerelStream, remoteAudio = new Audio(), aktifCall;
         var peer = new Peer(kodOlustur()); 
-        var sesGidiyor = true;
-        var hoparlorAcik = false;
+        var sesGidiyor = true, hoparlorAcik = false;
 
         function kodOlustur() {
             let m = "", c = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -38,16 +39,23 @@
             return m;
         }
 
+        function gorusmeyiBitir() {
+            if (aktifCall) {
+                aktifCall.close();
+                aktifCall = null;
+                document.getElementById('durum').innerText = "Görüşme sonlandırıldı.";
+            }
+        }
+
         function sesiKapat() {
             sesGidiyor = !sesGidiyor;
-            // Mikrofonu susturuyoruz (kendi sesini kapatır)
             yerelStream.getAudioTracks()[0].enabled = sesGidiyor;
             document.getElementById('muteBtn').innerText = sesGidiyor ? "Mikrofon: Açık" : "Mikrofon: Kapalı";
         }
 
         function hoparlorDegistir() {
             hoparlorAcik = !hoparlorAcik;
-            remoteAudio.volume = hoparlorAcik ? 1.0 : 0.2; // Hoparlör açık 1.0, kapalı (kulağa tutma) 0.2
+            remoteAudio.volume = hoparlorAcik ? 1.0 : 0.2;
             document.getElementById('hoparlorBtn').innerText = hoparlorAcik ? "Hoparlör: Açık" : "Hoparlör: Kapalı";
         }
 
@@ -75,11 +83,12 @@
         function odaKoduylaBaglan() {
             var kod = document.getElementById("odaKoduGiris").value;
             if (kod.length !== 8) { alert("8 haneli kod gir!"); return; }
-            var call = peer.call(kod, yerelStream);
-            call.on('stream', s => gelenSesiBaslat(s));
+            aktifCall = peer.call(kod, yerelStream);
+            aktifCall.on('stream', s => gelenSesiBaslat(s));
         }
 
         peer.on('call', call => {
+            aktifCall = call;
             call.answer(yerelStream);
             call.on('stream', s => gelenSesiBaslat(s));
         });
