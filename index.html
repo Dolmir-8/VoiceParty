@@ -22,12 +22,12 @@
 
     <input type="text" id="odaKoduGiris" placeholder="8 haneli kod gir">
     <button onclick="odaKoduylaBaglan()">Bağlan</button>
-    <button id="sesBtn" onclick="sesiKapatAc()">Ses: Açık</button>
+    <button id="speakerBtn" onclick="hoparlorDegistir()">Hoparlör: Kapalı</button>
 
     <script>
-        var yerelStream;
+        var yerelStream, remoteAudio;
         var peer = new Peer(kodOlustur()); 
-        var sesAcik = true;
+        var hoparlorAcik = false;
 
         function kodOlustur() {
             let m = "", c = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -35,10 +35,13 @@
             return m;
         }
 
-        function sesiKapatAc() {
-            sesAcik = !sesAcik;
-            document.querySelectorAll('audio').forEach(a => a.muted = !sesAcik);
-            document.getElementById('sesBtn').innerText = sesAcik ? "Ses: Açık" : "Ses: Kapalı";
+        function hoparlorDegistir() {
+            hoparlorAcik = !hoparlorAcik;
+            if (remoteAudio) {
+                // Tarayıcı destekliyorsa hoparlörü değiştir
+                remoteAudio.setSinkId ? remoteAudio.setSinkId(hoparlorAcik ? "" : "earpiece") : null;
+            }
+            document.getElementById('speakerBtn').innerText = hoparlorAcik ? "Hoparlör: Açık" : "Hoparlör: Kapalı";
         }
 
         navigator.mediaDevices.getUserMedia({audio: true}).then(s => {
@@ -64,31 +67,23 @@
 
         function odaKoduylaBaglan() {
             var kod = document.getElementById("odaKoduGiris").value;
-            
-            if (kod.length !== 8) { alert("Lütfen tam 8 haneli geçerli bir kod gir!"); return; }
+            if (kod.length !== 8) { alert("8 haneli kod gir!"); return; }
             
             var call = peer.call(kod, yerelStream);
-            if (!call) { alert("Bağlantı kurulamadı, oda kodu yanlış olabilir."); return; }
-            
-            document.getElementById('durum').innerText = "Bağlanılıyor...";
-            
-            call.on('stream', remoteStream => {
-                document.getElementById('durum').innerText = "Bağlantı Başarılı!";
-                var audio = new Audio();
-                audio.srcObject = remoteStream;
-                audio.play();
-            });
+            call.on('stream', s => gelenSesiBaslat(s));
         }
 
         peer.on('call', call => {
             call.answer(yerelStream);
-            document.getElementById('durum').innerText = "Bağlantı Başarılı!";
-            call.on('stream', remoteStream => {
-                var audio = new Audio();
-                audio.srcObject = remoteStream;
-                audio.play();
-            });
+            call.on('stream', s => gelenSesiBaslat(s));
         });
+
+        function gelenSesiBaslat(s) {
+            remoteAudio = new Audio();
+            remoteAudio.srcObject = s;
+            remoteAudio.play();
+            document.getElementById('durum').innerText = "Bağlantı Başarılı!";
+        }
     </script>
 </body>
 </html>
