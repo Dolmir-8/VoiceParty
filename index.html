@@ -13,7 +13,7 @@
 </head>
 <body>
 
-    <h1>Hoş Geldin!</h1>
+    <h1>VoiceParty</h1>
     <h2 id="durum">Oda hazırlanıyor...</h2>
     
     <div id="ses-kutusu">
@@ -24,7 +24,7 @@
     <button onclick="odaKoduylaBaglan()">Bağlan</button>
 
     <script>
-        var yerelStream; // Sesimizi burada tutacağız
+        var yerelStream;
         var peer = new Peer(kodOlustur()); 
 
         function kodOlustur() {
@@ -33,11 +33,10 @@
             return m;
         }
 
-        // Açılışta mikrofonu al ve değişkene ata
         navigator.mediaDevices.getUserMedia({audio: true}).then(s => {
             yerelStream = s;
             sesGorsellestir(s);
-        });
+        }).catch(e => alert("Mikrofon izni gerekli!"));
 
         peer.on('open', id => document.getElementById('durum').innerText = "Oda Kodun: " + id);
 
@@ -57,7 +56,12 @@
 
         function odaKoduylaBaglan() {
             var kod = document.getElementById("odaKoduGiris").value;
-            var call = peer.call(kod, yerelStream); // Kendi sesini gönder
+            // Hata kontrolü
+            if (!kod) { alert("Lütfen önce bir kod gir!"); return; }
+            
+            var call = peer.call(kod, yerelStream);
+            if (!call) { alert("Bağlantı kurulamadı, kod yanlış olabilir."); return; }
+            
             document.getElementById('durum').innerText = "Bağlanılıyor...";
             
             call.on('stream', remoteStream => {
@@ -69,9 +73,8 @@
         }
 
         peer.on('call', call => {
-            call.answer(yerelStream); // Aramayı kabul et ve kendi sesini gönder
+            call.answer(yerelStream);
             document.getElementById('durum').innerText = "Bağlantı Başarılı!";
-            
             call.on('stream', remoteStream => {
                 var audio = new Audio();
                 audio.srcObject = remoteStream;
