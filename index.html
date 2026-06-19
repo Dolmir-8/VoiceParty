@@ -24,19 +24,22 @@
     <button onclick="odaKoduylaBaglan()">Bağlan</button>
 
     <script>
+        var yerelStream; // Sesimizi burada tutacağız
+        var peer = new Peer(kodOlustur()); 
+
         function kodOlustur() {
             let m = "", c = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
             for (let i = 0; i < 8; i++) m += c.charAt(Math.floor(Math.random() * c.length));
             return m;
         }
 
-        var benimKodu = kodOlustur();
-        var peer = new Peer(benimKodu); 
-        
-        peer.on('open', id => {
-            document.getElementById('durum').innerText = "Oda Kodun: " + id;
-            navigator.mediaDevices.getUserMedia({audio: true}).then(s => sesGorsellestir(s));
+        // Açılışta mikrofonu al ve değişkene ata
+        navigator.mediaDevices.getUserMedia({audio: true}).then(s => {
+            yerelStream = s;
+            sesGorsellestir(s);
         });
+
+        peer.on('open', id => document.getElementById('durum').innerText = "Oda Kodun: " + id);
 
         function sesGorsellestir(s) {
             const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -54,18 +57,25 @@
 
         function odaKoduylaBaglan() {
             var kod = document.getElementById("odaKoduGiris").value;
-            navigator.mediaDevices.getUserMedia({audio: true}).then(s => {
-                var call = peer.call(kod, s);
-                document.getElementById('durum').innerText = "Bağlanılıyor...";
-                sesGorsellestir(s);
+            var call = peer.call(kod, yerelStream); // Kendi sesini gönder
+            document.getElementById('durum').innerText = "Bağlanılıyor...";
+            
+            call.on('stream', remoteStream => {
+                document.getElementById('durum').innerText = "Bağlantı Başarılı!";
+                var audio = new Audio();
+                audio.srcObject = remoteStream;
+                audio.play();
             });
         }
 
         peer.on('call', call => {
-            navigator.mediaDevices.getUserMedia({audio: true}).then(s => {
-                call.answer(s);
-                sesGorsellestir(s);
-                document.getElementById('durum').innerText = "Bağlantı Başarılı!";
+            call.answer(yerelStream); // Aramayı kabul et ve kendi sesini gönder
+            document.getElementById('durum').innerText = "Bağlantı Başarılı!";
+            
+            call.on('stream', remoteStream => {
+                var audio = new Audio();
+                audio.srcObject = remoteStream;
+                audio.play();
             });
         });
     </script>
