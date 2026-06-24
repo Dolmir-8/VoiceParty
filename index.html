@@ -9,13 +9,18 @@
         .bar { width: 15px; background: white; height: 20px; transition: height 0.05s ease; border-radius: 3px; }
         input { padding: 10px; width: 180px; border-radius: 5px; border: none; }
         button { padding: 10px 15px; cursor: pointer; background: #008080; color: white; border: none; border-radius: 5px; margin: 3px; font-weight: bold; }
-        .uyari { font-size: 10px; background: rgba(0,0,0,0.2); padding: 5px; margin: 10px; border-radius: 5px; }
+        
+        /* Uyarı yazısı tasarımı */
+        .uyari-footer { font-size: 13px; background: #006666; padding: 15px; margin-top: 50px; border-radius: 10px; font-weight: bold; }
+        
+        /* Oda listesi */
+        #odaListesi { margin-top: 20px; background: rgba(0,0,0,0.1); padding: 10px; border-radius: 10px; }
+        .oda-item { background: white; color: #008080; margin: 5px; padding: 8px; border-radius: 5px; cursor: pointer; }
     </style>
 </head>
 <body>
 
     <h1>VoiceParty</h1>
-    <div class="uyari">Ses odalarında oluşabilecek karşılıklı sorunlardan (küfür, toksiklik, taciz söylemleri) site sahipleri sorumlu değildir.</div>
     <h2 id="durum">Oda hazırlanıyor...</h2>
     
     <div id="ses-kutusu">
@@ -23,14 +28,24 @@
     </div>
 
     <input type="text" id="odaKoduGiris" placeholder="8 haneli kod gir">
-    <button onclick="odaKoduylaBaglan()">Odaya Katıl</button>
+    <button onclick="odaKoduylaBaglan()">Bağlan</button>
+    <button onclick="odamiListeyeEkle()">Odamı Paylaş</button>
     <br>
     <button id="muteBtn" onclick="sesiKapat()">Mikrofon: Açık</button>
     <button id="hoparlorBtn" onclick="hoparlorDegistir()">Hoparlör: Kapalı</button>
     <button id="kapatBtn" onclick="gorusmeyiBitir()" style="background:#e74c3c;">Aramayı Kapat</button>
 
+    <div id="odaListesi">
+        <h3>Aktif Odalar (Tıkla Katıl)</h3>
+        <ul id="liste" style="list-style: none; padding: 0;"></ul>
+    </div>
+
+    <div class="uyari-footer">
+        UYARI: Ses odalarında oluşabilecek karşılıklı sorunlardan (küfür, toksiklik, taciz söylemleri) site sahipleri sorumlu değildir.
+    </div>
+
     <script>
-        var yerelStream, remoteAudio = new Audio(), aktifCall;
+        var yerelStream, remoteAudio = new Audio(), aktifCall, benimID;
         var peer = new Peer(kodOlustur()); 
         var sesGidiyor = true, hoparlorAcik = false;
 
@@ -38,6 +53,15 @@
             let m = "", c = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
             for (let i = 0; i < 8; i++) m += c.charAt(Math.floor(Math.random() * c.length));
             return m;
+        }
+
+        // Listeye oda ekleme
+        function odamiListeyeEkle() {
+            var li = document.createElement("li");
+            li.className = "oda-item";
+            li.innerText = "Odaya Katıl: " + benimID;
+            li.onclick = function() { document.getElementById('odaKoduGiris').value = benimID; };
+            document.getElementById("liste").appendChild(li);
         }
 
         function gorusmeyiBitir() {
@@ -61,17 +85,17 @@
             sesGorsellestir(s);
         });
 
-        peer.on('open', id => document.getElementById('durum').innerText = "Oda Kodun: " + id);
+        peer.on('open', id => {
+            benimID = id;
+            document.getElementById('durum').innerText = "Oda Kodun: " + id;
+        });
 
-        // ONAY MEKANİZMASI
         peer.on('call', call => {
-            if (confirm("Birisi odana katılmak istiyor, onaylıyor musun?")) {
+            if (confirm("'" + call.peer + "' odana katılmak istiyor. Onaylıyor musun?")) {
                 aktifCall = call;
                 call.answer(yerelStream);
                 call.on('stream', s => gelenSesiBaslat(s));
-            } else {
-                call.close();
-            }
+            } else { call.close(); }
         });
 
         function odaKoduylaBaglan() {
